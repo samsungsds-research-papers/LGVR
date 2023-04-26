@@ -6,6 +6,7 @@ This repository holds a pytorch version of the code for the paper: Line Graph Vi
 ### Code
 python 3.8 \
 torch 1.9.0 \
+torchph 0.1.1 \
 numpy 1.20.1 \
 pandas 1.1.4 \
 matplotlib 3.4.1 \
@@ -50,6 +51,5 @@ The code is based on:
   (https://github.com/hadarser/ProvablyPowerfulGraphNetworks_torch)
 * How Powerful are Graph Neural Networks?
   (https://github.com/weihua916/powerful-gnns)
-* torchph (https://github.com/c-hofer/torchph)
 
 We sincerely thank them for their contributions.
