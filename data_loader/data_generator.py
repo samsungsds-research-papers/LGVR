@@ -43,7 +43,7 @@ class DataGenerator:
         self.test_size = len(self.test_graphs)
         self.labels_std = train_labels_std  # Needed for postprocess, multiply mean abs distance by this std
 
-    # load data for a benchmark graph (COLLAB, NCI1, NCI109, MUTAG, PTC, IMDBBINARY, IMDBMULTI, PROTEINS)
+    # load data for a benchmark graph (MUTAG, PTC, PROTEINS, NCI1, IMDBBINARY, IMDBMULTI)
     def load_data_benchmark(self):
         if self.config.gin:
             graphs, _ = gin_util.load_data(self.config.dataset_name, degree_as_tag=True)
