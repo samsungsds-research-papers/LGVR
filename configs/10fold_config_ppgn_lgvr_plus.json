@@ -1,0 +1,22 @@
+{
+  "dataset_name":"COLLAB",
+  "max_to_keep":1,
+  "gpu": "0",
+  "num_exp": 1,
+  "exp_name": "10fold_cross_validation",
+  "val_exist": true,
+  "dropout": 0.0,
+  "gin": false,
+  "model": "ppgn_lgvr_plus",
+
+  "architecture": {
+    "block_features": [400,400,400],
+    "depth_of_mlp": 2
+  },
+
+  "hyperparams": {
+    "learning_rate": [0.0001, 0.00005],
+    "batch_size": 5,
+    "optimizer": "adam"
+  }
+}
