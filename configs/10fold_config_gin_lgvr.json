@@ -1,5 +1,5 @@
 {
-  "dataset_name":"COLLAB",
+  "dataset_name":"MUTAG",
   "max_to_keep":1,
   "gpu": "0",
   "num_exp": 1,
