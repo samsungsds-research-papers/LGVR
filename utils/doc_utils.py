@@ -4,7 +4,7 @@ import os
 import json
 
 
-BASE_DIR = os.path.abspath("../experiments")
+BASE_DIR = os.path.abspath("experiments")
 
 
 def write_to_file_doc(train_acc, train_loss, val_acc, val_loss, epoch, config):
@@ -68,6 +68,30 @@ def get_folders_list(directory):
         for name in dirs:
             r.append(os.path.join(directory, name))
     return r
+
+
+def summary_10fold_results(summary_dir):
+    df = pd.read_csv(os.path.join(summary_dir, 'per_epoch_stats.csv'))
+
+    df = df.drop(['train_loss', 'train_accuracy', 'timestamp', 'experiment_name'], axis=1)  # drop irrelevant columns
+    df_group_std = df.groupby('epoch').std()
+    df_group = df.groupby('epoch').mean()
+    df_group['std'] = df_group_std.val_accuracy
+    best_epoch = df_group['val_accuracy'].idxmax()
+
+    best_row = df_group.loc[best_epoch]
+    print("Results")
+    print("Best epoch - {0}".format(best_epoch))
+    print("Mean Accuracy = {0}".format(best_row['val_accuracy']))
+    print("Mean std = {0}".format(best_row['std']))
+
+    # Document the validation results of the best epoch, per experiment
+    df2 = df[df.epoch == best_epoch].copy()
+    df2['fold'] = pd.Series(range(10), index=df2.index) + 1
+    df2 = df2.append(pd.Series([best_epoch, best_row['val_loss'], best_row['val_accuracy'], 'mean'], index=df2.columns),
+                     ignore_index=True)
+    fullpath = os.path.join(summary_dir, 'exp_summary.csv')
+    df2.to_csv(fullpath, index=False)
 
 
 def summary_qm9_results(summary_dir, test_dists, test_loss, best_epoch, create_csv=True):
