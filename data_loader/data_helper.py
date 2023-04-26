@@ -1,9 +1,11 @@
 import numpy as np
 import os
 import pickle
+import torch
+from utils.gin_util import S2VGraph
 
 
-NUM_LABELS = {'ENZYMES': 3, 'IMDBBINARY': 0, 'IMDBMULTI': 0, 'MUTAG': 7, 'NCI1': 37, 'NCI109': 38, 'PROTEINS': 3, 'PTC': 22}
+NUM_LABELS = {'IMDBBINARY': 0, 'IMDBMULTI': 0, 'MUTAG': 7, 'NCI1': 37, 'PROTEINS': 3, 'PTC': 22}
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -39,60 +41,92 @@ def load_dataset(ds_name):
     return graphs, np.array(labels)
 
 
-def load_qm9(target_param):
+def load_qm9(gin):
     """
     Constructs the graphs and labels of QM9 data set, already split to train, val and test sets
     :return: 6 numpy arrays:
                  train_graphs: N_train,
-                 train_labels: N_train x 12, (or Nx1 is target_param is not False)
+                 train_labels: N_train x 12
                  val_graphs: N_val,
-                 val_labels: N_train x 12, (or Nx1 is target_param is not False)
+                 val_labels: N_train x 12
                  test_graphs: N_test,
-                 test_labels: N_test x 12, (or Nx1 is target_param is not False)
+                 test_labels: N_test x 12
                  each graph of shape: 19 x Nodes x Nodes (CHW representation)
     """
-    train_graphs, train_labels = load_qm9_aux('train', target_param)
-    val_graphs, val_labels = load_qm9_aux('val', target_param)
-    test_graphs, test_labels = load_qm9_aux('test', target_param)
+    train_graphs, train_labels = load_qm9_aux('train', gin)
+    val_graphs, val_labels = load_qm9_aux('val', gin)
+    test_graphs, test_labels = load_qm9_aux('test', gin)
     return train_graphs, train_labels, val_graphs, val_labels, test_graphs, test_labels
 
 
-def load_qm9_aux(which_set, target_param):
+def load_qm9_aux(which_set, gin):
     """
     Read and construct the graphs and labels of QM9 data set, already split to train, val and test sets
     :param which_set: 'test', 'train' or 'val'
-    :param target_param: if not false, return the labels for this specific param only
     :return: graphs: (N,)
-             labels: N x 12, (or Nx1 is target_param is not False)
+             labels: N x 12
              each graph of shape: 19 x Nodes x Nodes (CHW representation)
     """
     base_path = BASE_DIR + "/data/QM9/QM9_{}.p".format(which_set)
     graphs, labels = [], []
-    with open(base_path, 'rb') as f:
-        data = pickle.load(f)
-        for instance in data:
-            labels.append(instance['y'])
-            nodes_num = instance['usable_features']['x'].shape[0]
-            graph = np.empty((nodes_num, nodes_num, 19))
-            # for i in range(13):
-            #     # 13 features per node - for each, create a diag matrix of it as a feature
-            #     graph[:, :, i] = np.diag(instance['usable_features']['x'][:, i])
-            # graph[:, :, 13] = instance['usable_features']['distance_mat']
-            # graph[:, :, 14] = instance['usable_features']['affinity']
-            # graph[:, :, 15:] = instance['usable_features']['edge_features']  # shape n x n x 4
-            graph[:, :, 0] = instance['usable_features']['affinity']
-            for i in range(1, 14):
-                # 13 features per node - for each, create a diag matrix of it as a feature
-                graph[:, :, i] = np.diag(instance['usable_features']['x'][:, i-1])
-            graph[:, :, 14] = instance['usable_features']['distance_mat']
-            graph[:, :, 15:] = instance['usable_features']['edge_features']  # shape n x n x 4
-            graphs.append(graph)
-    graphs = np.array(graphs)
-    for i in range(graphs.shape[0]):
-        graphs[i] = np.transpose(graphs[i], [2, 0, 1])
+    if gin:
+        with open(base_path, 'rb') as f:
+            data = pickle.load(f)
+            for instance in data:
+                labels.append(instance['y'])
+                nodes_num = instance['usable_features']['x'].shape[0]
+
+                graph = S2VGraph(g=[i for i in range(nodes_num)], label=instance['y'])
+                graph.adj_mat = torch.tensor(instance['usable_features']['affinity'])
+
+                # create node features
+                node_feat = np.empty((nodes_num, nodes_num, 18))
+                for i in range(13):
+                    # 13 features per node - for each, create a diag matrix of it as a feature
+                    node_feat[:, :, i] = np.diag(instance['usable_features']['x'][:, i])
+                node_feat[:, :, 13] = instance['usable_features']['distance_mat']
+                node_feat[:, :, 14:] = instance['usable_features']['edge_features']  # shape n x n x 4
+
+                final_node_feat = np.empty((nodes_num, 18))
+                for i in range(nodes_num):
+                    final_node_feat[i, :] = node_feat[i, i, :]
+                graph.node_features = torch.tensor(final_node_feat)
+
+                # create graph neighbors & max_neighbor
+                graph.neighbors = []
+                graph.max_neighbor = 0
+                for i in graph.adj_mat:
+                    nbhd = list(np.where(i == 1)[0])
+                    graph.neighbors.append(nbhd)
+                    graph.max_neighbor = max(len(nbhd), graph.max_neighbor)
+                edges = []
+                for idx, nbhd in enumerate(graph.neighbors):
+                    for n in nbhd:
+                        if n > idx:
+                            edges.append([idx, n])
+                edges.extend([[i, j] for j, i in edges])
+                graph.edge_mat = torch.LongTensor(edges).transpose(0, 1)
+
+                graphs.append(graph)
+    else:
+        with open(base_path, 'rb') as f:
+            data = pickle.load(f)
+            for instance in data:
+                labels.append(instance['y'])
+                nodes_num = instance['usable_features']['x'].shape[0]
+                graph = np.empty((nodes_num, nodes_num, 19))
+                for i in range(13):
+                    # 13 features per node - for each, create a diag matrix of it as a feature
+                    graph[:, :, i] = np.diag(instance['usable_features']['x'][:, i])
+                graph[:, :, 13] = instance['usable_features']['distance_mat']
+                graph[:, :, 14] = instance['usable_features']['affinity']
+                graph[:, :, 15:] = instance['usable_features']['edge_features']  # shape n x n x 4
+                graphs.append(graph)
+        graphs = np.array(graphs)
+        for i in range(graphs.shape[0]):
+            graphs[i] = np.transpose(graphs[i], [2, 0, 1])
+
     labels = np.array(labels).squeeze()  # shape N x 12
-    if target_param is not False:  # regression over a specific target, not all 12 elements
-        labels = labels[:, target_param].reshape(-1, 1)  # shape N x 1
 
     return graphs, labels
 
@@ -138,7 +172,7 @@ def get_parameter_split(ds_name):
     return train_idx, test_idx
 
 
-def group_same_size(graphs, labels):
+def group_same_size(graphs, labels, gin):
     """
     group graphs of same size to same array
     :param graphs: numpy array of shape (num_of_graphs) of numpy arrays of graphs adjacency matrix
@@ -147,27 +181,45 @@ def group_same_size(graphs, labels):
             in the shape (number of graphs with this size, num vertex, num. vertex, num vertex labels)
             the second arrayy is labels with correspons shape
     """
-    sizes = list(map(lambda t: t.shape[1], graphs))
+    if gin:
+        sizes = list(map(lambda t: t.node_features.shape[0], graphs))
+    else:
+        sizes = list(map(lambda t: t.shape[1], graphs))
     indexes = np.argsort(sizes)
-    graphs = graphs[indexes]
+    graphs = np.array(graphs)[indexes]
     labels = labels[indexes]
     r_graphs = []
     r_labels = []
     one_size = []
     start = 0
-    size = graphs[0].shape[1]
-    for i in range(len(graphs)):
-        if graphs[i].shape[1] == size:
-            one_size.append(np.expand_dims(graphs[i], axis=0))
-        else:
-            r_graphs.append(np.concatenate(one_size, axis=0))
-            r_labels.append(np.array(labels[start:i]))
-            start = i
-            one_size = []
-            size = graphs[i].shape[1]
-            one_size.append(np.expand_dims(graphs[i], axis=0))
-    r_graphs.append(np.concatenate(one_size, axis=0))
-    r_labels.append(np.array(labels[start:]))
+    if gin:
+        size = graphs[0].node_features.shape[0]
+        for i in range(len(graphs)):
+            if graphs[i].node_features.shape[0] == size:
+                one_size.append(graphs[i])
+            else:
+                r_graphs.append(one_size)
+                r_labels.append(np.array(labels[start:i]))
+                start = i
+                one_size = []
+                size = graphs[i].node_features.shape[0]
+                one_size.append(graphs[i])
+        r_graphs.append(one_size)
+        r_labels.append(np.array(labels[start:]))
+    else:
+        size = graphs[0].shape[1]
+        for i in range(len(graphs)):
+            if graphs[i].shape[1] == size:
+                one_size.append(np.expand_dims(graphs[i], axis=0))
+            else:
+                r_graphs.append(np.concatenate(one_size, axis=0))
+                r_labels.append(np.array(labels[start:i]))
+                start = i
+                one_size = []
+                size = graphs[i].shape[1]
+                one_size.append(np.expand_dims(graphs[i], axis=0))
+        r_graphs.append(np.concatenate(one_size, axis=0))
+        r_labels.append(np.array(labels[start:]))
     return r_graphs, r_labels
 
 
@@ -181,7 +233,7 @@ def shuffle_same_size(graphs, labels):
     return r_graphs, r_labels
 
 
-def split_to_batches(graphs, labels, size):
+def split_to_batches(graphs, labels, size, gin):
     """
     split the same size graphs array to batches of specified size
     last batch is in size num_of_graphs_this_size % size
@@ -193,15 +245,22 @@ def split_to_batches(graphs, labels, size):
     """
     r_graphs = []
     r_labels = []
-    for k in range(len(graphs)):
-        r_graphs = r_graphs + np.split(graphs[k], [j for j in range(size, graphs[k].shape[0], size)])
-        r_labels = r_labels + np.split(labels[k], [j for j in range(size, labels[k].shape[0], size)])
-
-    # Avoid bug for batch_size=1, where instead of creating numpy array of objects, we had numpy array of floats with
-    # different sizes - could not reshape
-    ret1, ret2 = np.empty(len(r_graphs), dtype=object), np.empty(len(r_labels), dtype=object)
-    ret1[:] = r_graphs
-    ret2[:] = r_labels
+    if gin:
+        for k in range(len(graphs)):
+            r_labels = r_labels + np.split(labels[k], [j for j in range(size, labels[k].shape[0], size)])
+            r_graphs = r_graphs + np.split(np.array(graphs[k]), [j for j in range(size, len(graphs[k]), size)])
+        ret1 = r_graphs
+        ret2 = np.empty(len(r_labels), dtype=object)
+        ret2[:] = r_labels
+    else:
+        for k in range(len(graphs)):
+            r_graphs = r_graphs + np.split(graphs[k], [j for j in range(size, graphs[k].shape[0], size)])
+            r_labels = r_labels + np.split(labels[k], [j for j in range(size, labels[k].shape[0], size)])
+        # Avoid bug for batch_size=1, where instead of creating numpy array of objects, we had numpy array of floats with
+        # different sizes - could not reshape
+        ret1, ret2 = np.empty(len(r_graphs), dtype=object), np.empty(len(r_labels), dtype=object)
+        ret1[:] = r_graphs
+        ret2[:] = r_labels
     return ret1, ret2
 
 
@@ -213,7 +272,6 @@ def shuffle(graphs, labels):
 
 
 def normalize_graph(curr_graph):
-
     split = np.split(curr_graph, [1], axis=2)
 
     adj = np.squeeze(split[0], axis=2)
@@ -226,14 +284,3 @@ def normalize_graph(curr_graph):
     labels= np.append(np.zeros(shape=(curr_graph.shape[0], curr_graph.shape[1], 1)), split[1], axis=2)
     return np.add(spred_adj, labels)
 
-
-if __name__ == '__main__':
-    graphs, labels = load_dataset("MUTAG")
-
-    import torch
-    adj = torch.Tensor(graphs[0][0])
-    edge_index = (adj > 0).nonzero().t()
-
-    print("edge_index")
-    print(edge_index)
-    print(edge_index.shape)
