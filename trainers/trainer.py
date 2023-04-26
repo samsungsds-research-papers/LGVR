@@ -1,4 +1,3 @@
-# import tensorflow as tf
 from tqdm import tqdm
 import numpy as np
 import torch
@@ -37,13 +36,12 @@ class Trainer(object):
             # train epoch
             train_acc, train_loss = self.train_epoch(cur_epoch)
             self.cur_epoch = cur_epoch
-            torch.cuda.empty_cache()
             # validation step
             if self.config.val_exist:
                 val_acc, val_loss = self.validate(cur_epoch)
                 # document results
                 doc_utils.write_to_file_doc(train_acc, train_loss, val_acc, val_loss, cur_epoch, self.config)
-
+            torch.cuda.empty_cache()
         if self.config.val_exist:
             # creates plots for accuracy and loss during training
             if not self.is_QM9:
@@ -77,6 +75,7 @@ class Trainer(object):
             # update results from train_step func
             total_loss += loss
             total_correct_labels_or_distances += correct_labels_or_distances
+
         tt.close()
         self.scheduler.step()
 
@@ -114,15 +113,10 @@ class Trainer(object):
         self.data_loader.initialize('val')
         self.model_wrapper.eval()
 
-        # initialize tqdm
-        # tt = tqdm(range(self.data_loader.num_iterations_val), total=self.data_loader.num_iterations_val,
-        #           desc="Val-{}-".format(epoch))
-
         total_loss = 0.
         total_correct_or_dist = 0.
 
         # Iterate over batches
-        # for cur_it in tt:
         for cur_it in range(self.data_loader.num_iterations_val):
             # One Train step on the current batch
             graph, label = self.data_loader.next_batch()
@@ -133,7 +127,6 @@ class Trainer(object):
             total_loss += loss.cpu().item()
             total_correct_or_dist += correct_or_dist
 
-        # tt.close()
 
         val_loss = total_loss/self.data_loader.val_size
         if self.is_QM9:
@@ -149,7 +142,7 @@ class Trainer(object):
             return val_dists, val_loss
         else:
             val_acc = total_correct_or_dist/self.data_loader.val_size
-            print("\t\tVal-{}  loss:{:.4f} -- acc:{:.4f}\n".format(epoch, val_loss, val_acc))
+            # print("\t\tVal-{}  loss:{:.4f} -- acc:{:.4f}\n".format(epoch, val_loss, val_acc))
             return val_acc, val_loss
 
     def test(self, load_best_model=False):
