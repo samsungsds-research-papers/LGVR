@@ -1,7 +1,7 @@
 import data_loader.data_helper as helper
-import utils.config
 import torch
-
+import utils.gin_util as gin_util
+import numpy as np
 
 class DataGenerator:
     def __init__(self, config):
@@ -25,7 +25,7 @@ class DataGenerator:
     # load QM9 data set
     def load_qm9_data(self):
         train_graphs, train_labels, val_graphs, val_labels, test_graphs, test_labels = \
-            helper.load_qm9(self.config.target_param)
+            helper.load_qm9(self.config.gin)
 
         # preprocess all labels by train set mean and std
         train_labels_mean = train_labels.mean(axis=0)
@@ -43,9 +43,13 @@ class DataGenerator:
         self.test_size = len(self.test_graphs)
         self.labels_std = train_labels_std  # Needed for postprocess, multiply mean abs distance by this std
 
-    # load data for a benchmark graph (ENZYMES, NCI1, NCI109, MUTAG, PTC, IMDBBINARY, IMDBMULTI, PROTEINS)
+    # load data for a benchmark graph (COLLAB, NCI1, NCI109, MUTAG, PTC, IMDBBINARY, IMDBMULTI, PROTEINS)
     def load_data_benchmark(self):
-        graphs, labels = helper.load_dataset(self.config.dataset_name)
+        if self.config.gin:
+            graphs, _ = gin_util.load_data(self.config.dataset_name, degree_as_tag=True)
+            labels = np.array([g.label for g in graphs])
+        else:
+            graphs, labels = helper.load_dataset(self.config.dataset_name)
         # if no fold specify creates random split to train and validation
         if self.config.num_fold is None:
             graphs, labels = helper.shuffle(graphs, labels)
@@ -65,8 +69,15 @@ class DataGenerator:
 
     def next_batch(self):
         graphs, labels = next(self.iter)
-        graphs, labels = torch.cuda.FloatTensor(graphs), torch.tensor(labels, device='cuda', dtype=self.labels_dtype)
-        # graphs, labels = torch.FloatTensor(graphs), torch.tensor(labels, device='cpu', dtype=self.labels_dtype)
+        if self.config.gin:
+            for graph in graphs:
+                graph.node_features = torch.tensor(graph.node_features, requires_grad=False, device='cuda',
+                                                   dtype=torch.float).clone().detach()
+                graph.adj_mat = torch.tensor(graph.adj_mat, requires_grad=False, device='cuda',
+                                             dtype=torch.float).clone().detach()
+            labels = torch.tensor(labels, requires_grad=False, device='cuda', dtype=self.labels_dtype).clone().detach()
+        else:
+            graphs, labels = torch.cuda.FloatTensor(graphs), torch.tensor(labels, device='cuda', dtype=self.labels_dtype)
         return graphs, labels
 
     # initialize an iterator from the data for one training epoch
@@ -84,31 +95,23 @@ class DataGenerator:
         """
         Reshuffle train data between epochs
         """
-        graphs, labels = helper.group_same_size(self.train_graphs, self.train_labels)
+        graphs, labels = helper.group_same_size(self.train_graphs, self.train_labels, self.config.gin)
         graphs, labels = helper.shuffle_same_size(graphs, labels)
-        graphs, labels = helper.split_to_batches(graphs, labels, self.batch_size)
+        graphs, labels = helper.split_to_batches(graphs, labels, self.batch_size, self.config.gin)
         self.num_iterations_train = len(graphs)
         graphs, labels = helper.shuffle(graphs, labels)
         self.iter = zip(graphs, labels)
 
     def split_val_test_to_batches(self):
         # Split the val and test sets to batchs, no shuffling is needed
-        graphs, labels = helper.group_same_size(self.val_graphs, self.val_labels)
-        graphs, labels = helper.split_to_batches(graphs, labels, self.batch_size)
+        graphs, labels = helper.group_same_size(self.val_graphs, self.val_labels, self.config.gin)
+        graphs, labels = helper.split_to_batches(graphs, labels, self.batch_size, self.config.gin)
         self.num_iterations_val = len(graphs)
         self.val_graphs_batches, self.val_labels_batches = graphs, labels
 
         if self.is_qm9:
             # Benchmark graphs have no test sets
-            graphs, labels = helper.group_same_size(self.test_graphs, self.test_labels)
-            graphs, labels = helper.split_to_batches(graphs, labels, self.batch_size)
+            graphs, labels = helper.group_same_size(self.test_graphs, self.test_labels, self.config.gin)
+            graphs, labels = helper.split_to_batches(graphs, labels, self.batch_size, self.config.gin)
             self.num_iterations_test = len(graphs)
             self.test_graphs_batches, self.test_labels_batches = graphs, labels
-
-
-if __name__ == '__main__':
-    config = utils.config.process_config('../configs/10fold_config.json')
-    data = DataGenerator(config)
-    data.initialize('train')
-
-
