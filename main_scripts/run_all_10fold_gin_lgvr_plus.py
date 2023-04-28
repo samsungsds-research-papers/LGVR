@@ -1,6 +1,6 @@
 import os
 
-datasets = ['MUTAG', 'PROTEINS', 'PTC', 'NCI1', 'IMDBBINARY', 'IMDBMULTI']
+datasets = ['MUTAG', 'PROTEINS', 'PTC', 'NCI1', 'NCI109', 'IMDBBINARY', 'IMDBMULTI']
 run_command = 'python main_scripts/main_10fold_experiment.py '
 args1 = '--config=configs/10fold_config_gin_lgvr_plus.json '
 args2 = '--dataset_name=%s'
