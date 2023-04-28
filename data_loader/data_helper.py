@@ -5,7 +5,7 @@ import torch
 from utils.gin_util import S2VGraph
 
 
-NUM_LABELS = {'IMDBBINARY': 0, 'IMDBMULTI': 0, 'MUTAG': 7, 'NCI1': 37, 'PROTEINS': 3, 'PTC': 22}
+NUM_LABELS = {'IMDBBINARY': 0, 'IMDBMULTI': 0, 'MUTAG': 7, 'NCI1': 37, 'NCI109':38, 'PROTEINS': 3, 'PTC': 22}
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
