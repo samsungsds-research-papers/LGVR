@@ -11,8 +11,6 @@ class S2VGraph(object):
             label: an integer graph label
             node_tags: a list of integer node tags
             node_features: a torch float tensor, one-hot representation of the tag that is used as input to neural nets
-            edge_mat: a torch long tensor, contain edge list, will be used to create torch sparse tensor
-            neighbors: list of neighbors (without self-loop)
         '''
         self.label = label
         self.g = g
