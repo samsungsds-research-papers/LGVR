@@ -12,6 +12,7 @@ pandas 1.1.4 \
 matplotlib 3.4.1 \
 scikit-learn 0.24.2 \
 networkx 2.0 \
+easydict 1.1 \
 tqdm 4.53.0
 
 ### Data
