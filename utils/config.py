@@ -1,5 +1,5 @@
 import json
-from utils.utils import EasyDict
+from easydict import EasyDict
 import os
 import datetime
 
