@@ -1,5 +1,6 @@
 # Line Graph Vietoris-Rips Persistence Diagram
-This repository holds a pytorch version of the code for the paper: Line Graph Vietoris-Rips Persistence Diagram for Topological Graph Representation Learning.
+
+This repository is the official implementation of the paper: Line Graph Vietoris-Rips Persistence Diagram for Topological Graph Representation Learning. 
 
 ## Prerequisites
 
@@ -12,7 +13,6 @@ pandas 1.1.4 \
 matplotlib 3.4.1 \
 scikit-learn 0.24.2 \
 networkx 2.0 \
-easydict 1.1 \
 tqdm 4.53.0
 
 ### Data
@@ -21,7 +21,10 @@ Before running the code, the data should be downloaded from the following Dropbo
 https://www.dropbox.com/s/dajg409tgs607gf/data.zip?dl=1
 ```
 
-## Train Models
+## Training
+
+To train the model(s) in the paper, run the following commands:
+
 ### Graph Classification
 
 To run 10-fold cross-validation for graph classification tasks, run the run_all_10fold_{model you want}.py with the following command:
