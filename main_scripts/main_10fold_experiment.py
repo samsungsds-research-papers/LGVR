@@ -23,7 +23,6 @@ def main():
     try:
         args = get_args()
         config = process_config(args.config, args.dataset_name)
-
     except Exception as e:
         print("missing or invalid arguments {}".format(e))
         exit(0)
@@ -33,6 +32,7 @@ def main():
 
     lr_list = config.hyperparams.learning_rate
     for lr in lr_list:
+        config = process_config(args.config, args.dataset_name)
         config.hyperparams.learning_rate = lr
         config = create_save_path(config)
         print("lr = {0}".format(config.hyperparams.learning_rate))
