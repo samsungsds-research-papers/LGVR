@@ -23,7 +23,6 @@ def main():
     try:
         args = get_args()
         config = process_config(args.config, dataset_name='QM9')
-
     except Exception as e:
         print("missing or invalid arguments %s" % e)
         exit(0)
@@ -33,6 +32,7 @@ def main():
 
     lr_list = config.hyperparams.learning_rate
     for lr in lr_list:
+        config = process_config(args.config, dataset_name='QM9')
         config.hyperparams.learning_rate = lr
         config = create_save_path(config)
         print("lr = {0}".format(config.hyperparams.learning_rate))
