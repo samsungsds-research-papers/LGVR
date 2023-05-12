@@ -72,6 +72,19 @@ $$\max_{i={1,\dots, t}} \frac{1}{10} \cdot \sum_{k=1}^{10} \text{(k-fold validat
 | PPGN                 | 88.88       | 64.7       | 76.39        | 81.21       | 81.77       | 72.2        | 44.73      |
 | ***PPGN-LGVR+(1)***  | **91.11**   | **66.47**  | **76.76**    | **83.04**   | **81.88**   | **73.5**    | **51.0**   |
 
+#### Auxiliary Results for GIN Type (with other performance metric)
+To compare models in a different perspective, we further measure performances of GIN type models based on another commonly used metric: $$\frac{1}{10} \cdot \sum_{k=1}^{10} (\max_{i={1,\dots, t}} \text{(k-fold validation accuracy at i-th epoch)})$$
+
+| **Model / Dataset** | **MUTAG**  | **PTC**     | **PROTEINS** | **NCI1**   | **NCI109** | **IMDB-B** | **IMDB-M** |
+|---------------------|------------|-------------|--------------|------------|------------|------------|------------|
+| GIN                 | 88.33      | 70.29       | 74.5         | 72.31      | 71.97      | 77.3       | 50.0       |
+| GFL                 | 92.22      | 71.47       | 76.84        | 73.23      | 72.88      | 75.2       | 49.6       |
+| GFL+                | 91.11      | 69.41       | 73.96        | 73.28      | 72.62      | 77.4       | 51.0       |
+| ***GIN-LGVR(1)***   | **92.78**  | 70.29       | **77.3**     | 72.34      | 71.77      | 76.7       | 50.07      |
+| ***GIN-LGVR+(1)***  | 91.11      | **72.64**   | 74.68        | **73.94**  | **73.45**  | **77.8**   | **52.0**   |
+
+
+
 ### Graph Regression Results (QM9 with 12 tasks)
 Since the QM9 dataset has a separate test set, we report the mean absolute error for 12 tasks as performance on the test set (meaning a smaller value indicates a better model).
 
