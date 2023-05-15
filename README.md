@@ -73,7 +73,7 @@ $$\max_{i={1,\dots, t}} \frac{1}{10} \cdot \sum_{k=1}^{10} \text{(k-fold validat
 | ***PPGN-LGVR+(1)***  | **91.11**   | **66.47**  | **76.76**    | **83.04**   | **81.88**   | **73.5**    | **51.0**   |
 
 #### Auxiliary Results for GIN Type (with other performance metric)
-To compare models in a different perspective, we further measure performances of GIN type models based on another commonly used metric: $$\frac{1}{10} \cdot \sum_{k=1}^{10} (\max_{i={1,\dots, t}} \text{(k-fold validation accuracy at i-th epoch)})$$
+To compare models in a different perspective, we further measure performances of GIN type models based on another commonly used metric (meaning a large value indicates a better model): $$\frac{1}{10} \cdot \sum_{k=1}^{10} (\max_{i={1,\dots, t}} \text{(k-fold validation accuracy at i-th epoch)})$$
 
 | **Model / Dataset** | **MUTAG**  | **PTC**     | **PROTEINS** | **NCI1**   | **NCI109** | **IMDB-B** | **IMDB-M** |
 |---------------------|------------|-------------|--------------|------------|------------|------------|------------|
